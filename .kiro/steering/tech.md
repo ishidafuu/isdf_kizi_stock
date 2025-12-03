@@ -2,44 +2,118 @@
 
 ## Architecture
 
-[To be defined as project develops]
+**Event-Driven Bot Architecture**
+- Discord Bot（イベントリスナー）→ 処理パイプライン → GitHub自動プッシュ
+- ラズパイ上で24時間稼働
+- 単一ユーザー、個人利用想定
 
 ## Core Technologies
 
-- **Language**: [To be selected]
-- **Framework**: [To be selected]
-- **Runtime**: [To be defined]
+- **Language**: Python 3.11+
+- **Bot Framework**: discord.py
+- **LLM**: Gemini Flash 2.5 (Google Generative AI)
+- **Hosting**: Raspberry Pi（自宅、24時間稼働）
+- **Storage**: GitHub Repository（Obsidian Vault同期用）
 
 ## Key Libraries
 
-[Will be documented as dependencies are added]
+### Discord Bot
+- `discord.py`: Discord Bot SDK
+- `python-dotenv`: 環境変数管理
+
+### Web Scraping
+- `beautifulsoup4` または `pyquery`: OGP取得
+- `requests`: HTTP通信
+
+### AI Integration
+- `google-generativeai`: Gemini API SDK
+
+### Git Operations
+- `GitPython`: GitHub操作の自動化
+
+### Date/Time
+- `python-dateutil`: 日付フォーマット処理
 
 ## Development Standards
 
 ### Type Safety
-[To be established based on chosen language]
+- Python 3.11+ の型ヒント（Type Hints）を活用
+- 関数シグネチャには型アノテーションを必須とする
 
 ### Code Quality
-[To be defined with linter/formatter selection]
+- **Linter**: `ruff` または `flake8`
+- **Formatter**: `black`
+- **Import Sorting**: `isort`
 
 ### Testing
-[To be established with testing framework selection]
+- **Framework**: `pytest`
+- **重点テスト領域**:
+  - OGP取得の成功/失敗ケース
+  - Gemini API呼び出しのモック
+  - Markdownファイル生成ロジック
+
+### Error Handling
+- OGP取得失敗時: URLとコメントのみ保存
+- Gemini API失敗時: デフォルトタグで保存
+- GitHub push失敗時: ローカルにバックアップ＋リトライ
 
 ## Development Environment
 
 ### Required Tools
-[To be defined as project setup progresses]
+- Python 3.11+
+- Poetry または pip (依存管理)
+- Git
+- Discord Bot Token
+- Gemini API Key
+- GitHub Personal Access Token
+
+### Environment Variables
+```bash
+DISCORD_BOT_TOKEN=xxx
+GEMINI_API_KEY=xxx
+GITHUB_TOKEN=xxx
+GITHUB_REPO=username/obsidian-vault
+OBSIDIAN_VAULT_PATH=./vault
+```
 
 ### Common Commands
 ```bash
-# Dev: [To be defined]
-# Build: [To be defined]
-# Test: [To be defined]
+# Dev: poetry run python bot.py
+# Test: poetry run pytest
+# Lint: ruff check . && black --check .
+# Format: black . && isort .
 ```
 
 ## Key Technical Decisions
 
-[Will be documented as architectural decisions are made]
+### OGP取得方式
+- `og:title`, `og:description` を優先取得
+- フォールバック: `<title>` タグ、meta description
+
+### Markdown形式
+```yaml
+---
+tags: [tag1, tag2, tag3]
+url: https://example.com
+created: 2025-01-15
+---
+
+# タイトル
+
+## 概要
+OGP description + Geminiの補足要約
+
+## コメント
+- 2025-01-15: 初回投稿時のコメント
+```
+
+### ファイル命名規則
+`YYYY-MM-DD_記事タイトル.md`（タイトルはサニタイズ済み）
+
+### コスト制約
+- 月500円以内の運用
+- Gemini Flash 2.5 を利用（低コスト）
+- ラズパイホスティングで外部サーバーコスト削減
 
 ---
 
