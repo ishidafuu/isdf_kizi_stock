@@ -115,7 +115,10 @@ class TestCommentAppendFlowIntegration:
 
         # コンポーネントの初期化
         content_parser = ContentParser()
+
+        # VaultStorageに明示的にテスト用のディレクトリを設定
         vault_storage = VaultStorage()
+        vault_storage.articles_dir = vault_dir  # テスト用のディレクトリを直接設定
 
         # GitManagerはGitリポジトリが必要なので、リポジトリを初期化
         from git import Repo
