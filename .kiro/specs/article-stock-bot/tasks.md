@@ -2,19 +2,19 @@
 
 ## 1. プロジェクト基盤セットアップ
 
-- [ ] 1.1 (P) Python開発環境とプロジェクト構造の初期化
+- [x] 1.1 (P) Python開発環境とプロジェクト構造の初期化
   - Python 3.11+の環境構築とPoetryによる依存関係管理の設定
   - `pyproject.toml`の作成と基本設定（プロジェクト名、バージョン、依存パッケージ）
   - `.gitignore`に`.env`, `logs/`, `vault/`を追加
   - _Requirements: なし（環境構築タスク）_
 
-- [ ] 1.2 (P) ディレクトリ構造の作成とロギング設定
+- [x] 1.2 (P) ディレクトリ構造の作成とロギング設定
   - `src/bot/`, `src/scraper/`, `src/ai/`, `src/storage/`, `src/utils/`, `config/`, `tests/`, `logs/`, `vault/articles/`ディレクトリを作成
   - `src/utils/logger.py`にRotatingFileHandlerを使用したロガー設定を実装
   - ログファイルのローテーション（最大10MB、7日分保持）を設定
   - _Requirements: 9.1, 9.2, 9.5, 9.6_
 
-- [ ] 1.3 (P) 環境変数管理と設定ファイルの実装
+- [x] 1.3 (P) 環境変数管理と設定ファイルの実装
   - `.env.sample`を作成し、必要な環境変数のテンプレートを提供
   - `python-dotenv`を使用した環境変数読み込み処理を実装
   - `config/settings.py`にアプリケーション設定（タイムアウト値、タグ数、ファイル命名規則）を定義
