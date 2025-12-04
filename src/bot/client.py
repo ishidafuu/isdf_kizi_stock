@@ -125,7 +125,17 @@ class EventListener(Client):
         # 5. メッセージハンドラに処理を委譲
         if self.message_handler:
             try:
-                await self.message_handler.handle_new_message(message)
+                # スレッド内のメッセージかどうかを判定（Requirement 8.1）
+                # message.referenceが存在する場合、スレッドまたはリプライ
+                if message.reference and message.reference.message_id:
+                    # スレッドコメント処理
+                    self.logger.info(
+                        f"スレッドコメントとして処理: {message.id}"
+                    )
+                    await self.message_handler.handle_thread_comment(message)
+                else:
+                    # 新規メッセージ処理
+                    await self.message_handler.handle_new_message(message)
             except Exception as e:
                 self.logger.error(
                     f"メッセージ処理中にエラーが発生: {str(e)}",
