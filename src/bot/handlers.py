@@ -148,9 +148,13 @@ class MessageHandler:
         if not self.gemini_client:
             raise RuntimeError("GeminiClientが設定されていません")
 
+        # OGP取得失敗時のタイトルフォールバック（Requirement 3.5）
+        article_title = ogp_data.get("title") or "無題の記事"
+        article_description = ogp_data.get("description") or ""
+
         ai_result = await self.gemini_client.generate_tags_and_summary(
-            title=ogp_data.get("title", "無題の記事"),
-            description=ogp_data.get("description", "")
+            title=article_title,
+            description=article_description
         )
 
         # 3. Markdownファイル生成
@@ -158,9 +162,9 @@ class MessageHandler:
             raise RuntimeError("MarkdownGeneratorが設定されていません")
 
         markdown_content = self.markdown_generator.generate(
-            title=ogp_data.get("title", "無題の記事"),
+            title=article_title,
             url=url,
-            description=ogp_data.get("description", ""),
+            description=article_description,
             tags=ai_result.get("tags", Settings.DEFAULT_TAGS),
             summary=ai_result.get("summary", ""),
             comment=comment
@@ -171,7 +175,7 @@ class MessageHandler:
             raise RuntimeError("VaultStorageが設定されていません")
 
         file_path = await self.vault_storage.save_article(
-            title=ogp_data.get("title", "無題の記事"),
+            title=article_title,
             content=markdown_content
         )
 
