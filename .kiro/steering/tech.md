@@ -22,8 +22,8 @@
 - `python-dotenv`: 環境変数管理
 
 ### Web Scraping
-- `beautifulsoup4` または `pyquery`: OGP取得
-- `requests`: HTTP通信
+- `beautifulsoup4`: OGP取得・HTML解析
+- `aiohttp`: 非同期HTTP通信（discord.pyとの統合のため、requestsではなくaiohttpを使用）
 
 ### AI Integration
 - `google-generativeai`: Gemini API SDK
