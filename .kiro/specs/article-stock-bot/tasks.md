@@ -271,19 +271,19 @@
 
 ## 12. デプロイ準備
 
-- [ ] 12.1 Raspberry Pi環境構築ドキュメントの作成
+- [x] 12.1 Raspberry Pi環境構築ドキュメントの作成
   - Python 3.11+環境構築手順
   - 必要なライブラリのインストール手順（poetry install）
   - `.env`ファイルの設定例と環境変数の説明
   - _Requirements: なし（ドキュメント作成タスク）_
 
-- [ ] 12.2 systemdサービス化の設定
+- [x] 12.2 systemdサービス化の設定
   - Botをバックグラウンドで起動するためのsystemdユニットファイル作成
   - 自動再起動の設定
   - ログ出力の設定
   - _Requirements: 1.3_
 
-- [ ] 12.3 GitHub Repositoryのクローンと初期設定
+- [x] 12.3 GitHub Repositoryのクローンと初期設定
   - Obsidian Vault用のGitHubリポジトリのクローン手順
   - Personal Access Tokenの設定手順
   - 初期ディレクトリ構造（`vault/articles/`）の作成
