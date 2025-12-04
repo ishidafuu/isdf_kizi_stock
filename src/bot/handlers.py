@@ -243,21 +243,108 @@ class MessageHandler:
             message: スレッド内のDiscordメッセージ
         """
         try:
-            # スレッドの親メッセージから該当ファイルを特定
+            # スレッドの親メッセージから該当ファイルを特定（Requirement 8.1）
             if not message.reference or not message.reference.message_id:
                 raise ValueError("親メッセージが見つかりません")
 
-            # コメント追記処理（後で実装）
-            # TODO: ファイル特定とコメント追記ロジックを実装
+            # 親メッセージを取得
+            parent_message = await message.channel.fetch_message(
+                message.reference.message_id
+            )
+
+            # 親メッセージからURLを抽出
+            if not self.content_parser:
+                raise RuntimeError("ContentParserが設定されていません")
+
+            parse_result = self.content_parser.parse_message(
+                parent_message.content
+            )
+            url = parse_result.get("url")
+
+            if not url:
+                raise ValueError(
+                    "親メッセージにURLが含まれていません。"
+                    "コメントを追記できるのはURL投稿のみです。"
+                )
+
+            # URLから該当記事のファイルを検索（Requirement 8.1）
+            if not self.vault_storage:
+                raise RuntimeError("VaultStorageが設定されていません")
+
+            file_path = self.vault_storage.find_article_by_url(url)
+
+            if not file_path:
+                raise FileNotFoundError(
+                    f"URLに対応する記事ファイルが見つかりません: {url}"
+                )
+
+            self.logger.info(
+                f"記事ファイルを特定: {file_path}"
+            )
+
+            # Git pullで最新版を取得（Requirement 8.2）
+            if not self.git_manager:
+                raise RuntimeError("GitManagerが設定されていません")
+
+            pull_success = await self.git_manager.pull_latest()
+            if not pull_success:
+                self.logger.warning(
+                    "git pullに失敗しましたが、処理を継続します"
+                )
+
+            # コメントを追記（Requirement 8.2, 8.3）
+            comment_text = message.content.strip()
+            await self.vault_storage.append_comment(
+                file_path=file_path,
+                comment=comment_text
+            )
+
+            # GitHubに再プッシュ（Requirement 8.4）
+            commit_message = f"Update article: Add comment to {file_path.name}"
+            push_success = await self.git_manager.commit_and_push(
+                file_path=file_path,
+                commit_message=commit_message
+            )
+
+            if not push_success:
+                self.logger.error(
+                    "GitHubプッシュに失敗しましたが、ローカルには保存されています"
+                )
 
             self.logger.info(
                 f"スレッドコメント処理完了: {message.id}"
             )
 
-            # 成功リアクション追加
+            # 成功リアクション追加（Requirement 8.5）
             await self.reaction_manager.add_thread_comment_reaction(message)
 
+        except FileNotFoundError as e:
+            # ファイルが見つからない場合の特別なエラーハンドリング（Requirement 8.6）
+            log_exception(
+                self.logger,
+                f"記事ファイルが見つかりません (ID: {message.id})",
+                e
+            )
+
+            await message.reply(
+                f"❌ 記事ファイルが見つかりませんでした。\n"
+                f"親メッセージのURLに対応する記事が保存されていない可能性があります。"
+            )
+
+        except ValueError as e:
+            # URL不在などのバリデーションエラー
+            log_exception(
+                self.logger,
+                f"バリデーションエラー (ID: {message.id})",
+                e
+            )
+
+            await message.reply(
+                f"❌ {str(e)}"
+            )
+
         except Exception as e:
+            # その他の予期しないエラー
             log_exception(
                 self.logger,
                 f"スレッドコメント処理中にエラーが発生 (ID: {message.id})",
