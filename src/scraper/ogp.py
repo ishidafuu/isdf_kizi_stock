@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 
 from config.settings import Settings
 from src.utils.logger import log_exception, setup_logger
+from src.utils.retry import retry_on_network_error
 
 
 class OGPScraper:
@@ -85,7 +86,9 @@ class OGPScraper:
 
     async def _fetch_html(self, url: str) -> Optional[str]:
         """
-        URLからHTMLを取得（Requirement 3.1, 3.6, 3.7）
+        URLからHTMLを取得（Requirement 3.1, 3.6, 3.7, 9.4）
+
+        ネットワークエラー時は自動的にリトライします。
 
         Args:
             url: 対象のURL
@@ -94,39 +97,14 @@ class OGPScraper:
             Optional[str]: HTML文字列（失敗時None）
         """
         try:
-            timeout = aiohttp.ClientTimeout(
-                total=Settings.OGP_TIMEOUT_SECONDS
+            # ネットワークエラー時のリトライ処理を適用（Requirement 9.4）
+            return await retry_on_network_error(
+                self._fetch_html_internal,
+                max_retries=Settings.NETWORK_RETRY_COUNT,
+                delay=Settings.NETWORK_RETRY_DELAY,
+                logger=self.logger,
+                url=url
             )
-
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(url) as response:
-                    # ステータスコードチェック
-                    if response.status != 200:
-                        self.logger.warning(
-                            f"HTTPステータスコードエラー: {response.status} - {url}"
-                        )
-                        return None
-
-                    # Content-Lengthチェック（10MB超過の場合は取得しない）
-                    content_length = response.headers.get("Content-Length")
-                    if content_length:
-                        if int(content_length) > Settings.MAX_CONTENT_SIZE:
-                            self.logger.error(
-                                f"コンテンツサイズ超過: {content_length} bytes - {url}"
-                            )
-                            return None
-
-                    # HTMLを取得
-                    html = await response.text()
-
-                    # 取得後のサイズチェック
-                    if len(html.encode("utf-8")) > Settings.MAX_CONTENT_SIZE:
-                        self.logger.error(
-                            f"コンテンツサイズ超過（取得後）: {len(html.encode('utf-8'))} bytes - {url}"
-                        )
-                        return None
-
-                    return html
 
         except asyncio.TimeoutError:
             self.logger.error(
@@ -136,10 +114,61 @@ class OGPScraper:
         except Exception as e:
             log_exception(
                 self.logger,
-                f"HTML取得中にエラーが発生: {url}",
+                f"HTML取得中にエラーが発生（リトライ後）: {url}",
                 e
             )
             return None
+
+    async def _fetch_html_internal(self, url: str) -> str:
+        """
+        URLからHTMLを取得（内部実装）
+
+        Args:
+            url: 対象のURL
+
+        Returns:
+            str: HTML文字列
+
+        Raises:
+            aiohttp.ClientError: ネットワークエラー
+            ValueError: コンテンツサイズ超過やHTTPステータスエラー
+        """
+        timeout = aiohttp.ClientTimeout(
+            total=Settings.OGP_TIMEOUT_SECONDS
+        )
+
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(url) as response:
+                # ステータスコードチェック
+                if response.status != 200:
+                    self.logger.warning(
+                        f"HTTPステータスコードエラー: {response.status} - {url}"
+                    )
+                    # リトライしないようにValueErrorを発生
+                    raise ValueError(f"HTTP {response.status}")
+
+                # Content-Lengthチェック（10MB超過の場合は取得しない）
+                content_length = response.headers.get("Content-Length")
+                if content_length:
+                    if int(content_length) > Settings.MAX_CONTENT_SIZE:
+                        self.logger.error(
+                            f"コンテンツサイズ超過: {content_length} bytes - {url}"
+                        )
+                        # リトライしないようにValueErrorを発生
+                        raise ValueError("Content size exceeded")
+
+                # HTMLを取得
+                html = await response.text()
+
+                # 取得後のサイズチェック
+                if len(html.encode("utf-8")) > Settings.MAX_CONTENT_SIZE:
+                    self.logger.error(
+                        f"コンテンツサイズ超過（取得後）: {len(html.encode('utf-8'))} bytes - {url}"
+                    )
+                    # リトライしないようにValueErrorを発生
+                    raise ValueError("Content size exceeded after fetch")
+
+                return html
 
     def _extract_ogp_tags(self, soup: BeautifulSoup) -> Dict[str, Optional[str]]:
         """
