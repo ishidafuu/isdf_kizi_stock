@@ -1,0 +1,30 @@
+[Unit]
+Description=Article Stock Bot - Discord Bot for article archiving with AI tagging
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/article-stock-bot
+ExecStart=/usr/bin/poetry run python main.py
+Restart=always
+RestartSec=10
+
+# ログ出力設定
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=article-stock-bot
+
+# 環境変数（.envファイルから自動読み込み）
+Environment="PYTHONUNBUFFERED=1"
+
+# リソース制限（オプション）
+# メモリ使用量を制限（Raspberry Pi向け）
+MemoryLimit=512M
+
+# プロセスのタイムアウト設定
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -37,6 +37,16 @@ class Settings:
     # ==================== ログ設定 ====================
     LOG_FILE_PATH: str = os.getenv("LOG_FILE_PATH", "./logs/article_bot.log")
 
+    # ==================== 管理者通知設定（Task 9.3） ====================
+    # 重要なエラー（GitHub push失敗、Gemini API継続失敗）のメール通知
+    ADMIN_NOTIFICATION_ENABLED: bool = os.getenv("ADMIN_NOTIFICATION_ENABLED", "false").lower() in ["true", "1"]
+    ADMIN_EMAIL_FROM: str = os.getenv("ADMIN_EMAIL_FROM", "")
+    ADMIN_EMAIL_TO: str = os.getenv("ADMIN_EMAIL_TO", "")
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "localhost")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+
     # ==================== タイムアウト設定 ====================
     # OGP取得のタイムアウト（秒）
     OGP_TIMEOUT_SECONDS: int = 10
@@ -46,6 +56,13 @@ class Settings:
 
     # GitHubプッシュのリトライ最大回数
     MAX_RETRY_COUNT: int = 3
+
+    # ==================== ネットワークリトライ設定 ====================
+    # ネットワークエラー時のリトライ最大回数（Requirement 9.4）
+    NETWORK_RETRY_COUNT: int = 3
+
+    # ネットワークエラー時のリトライ間隔（秒）（Requirement 9.4）
+    NETWORK_RETRY_DELAY: float = 1.0
 
     # ==================== タグ設定 ====================
     # 最小タグ数

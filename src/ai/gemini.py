@@ -14,6 +14,7 @@ import google.generativeai as genai
 
 from config.settings import Settings
 from src.utils.logger import log_exception, setup_logger
+from src.utils.retry import retry_on_network_error
 
 
 class GeminiClient:
@@ -152,7 +153,9 @@ class GeminiClient:
 
     async def _call_gemini_api(self, prompt: str) -> Optional[Dict]:
         """
-        Gemini APIを呼び出し（非同期）
+        Gemini APIを呼び出し（非同期）（Requirement 9.4）
+
+        ネットワークエラー時は自動的にリトライします。
 
         Args:
             prompt: プロンプトテキスト
@@ -161,34 +164,14 @@ class GeminiClient:
             Optional[Dict]: API呼び出し結果（失敗時None）
         """
         try:
-            # 同期APIを非同期で実行
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.model.generate_content(prompt)
+            # ネットワークエラー時のリトライ処理を適用（Requirement 9.4）
+            return await retry_on_network_error(
+                self._call_gemini_api_internal,
+                max_retries=Settings.NETWORK_RETRY_COUNT,
+                delay=Settings.NETWORK_RETRY_DELAY,
+                logger=self.logger,
+                prompt=prompt
             )
-
-            # レスポンステキストを取得
-            if not response or not response.text:
-                self.logger.error("Gemini APIレスポンスが空です")
-                return None
-
-            # JSONを解析
-            import json
-            response_text = response.text.strip()
-
-            # Markdown形式のコードブロックを除去
-            if response_text.startswith("```json"):
-                response_text = response_text[7:]
-            if response_text.startswith("```"):
-                response_text = response_text[3:]
-            if response_text.endswith("```"):
-                response_text = response_text[:-3]
-
-            response_text = response_text.strip()
-
-            result = json.loads(response_text)
-            return result
 
         except json.JSONDecodeError as e:
             log_exception(
@@ -200,10 +183,52 @@ class GeminiClient:
         except Exception as e:
             log_exception(
                 self.logger,
-                "Gemini API呼び出しに失敗",
+                "Gemini API呼び出しに失敗（リトライ後）",
                 e
             )
             return None
+
+    async def _call_gemini_api_internal(self, prompt: str) -> Dict:
+        """
+        Gemini APIを呼び出し（内部実装）
+
+        Args:
+            prompt: プロンプトテキスト
+
+        Returns:
+            Dict: API呼び出し結果
+
+        Raises:
+            Exception: API呼び出しエラー、JSON解析エラー
+        """
+        # 同期APIを非同期で実行
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: self.model.generate_content(prompt)
+        )
+
+        # レスポンステキストを取得
+        if not response or not response.text:
+            self.logger.error("Gemini APIレスポンスが空です")
+            raise ValueError("Empty API response")
+
+        # JSONを解析
+        import json
+        response_text = response.text.strip()
+
+        # Markdown形式のコードブロックを除去
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+
+        response_text = response_text.strip()
+
+        result = json.loads(response_text)
+        return result
 
     def _validate_tags(self, tags: List[str]) -> bool:
         """
