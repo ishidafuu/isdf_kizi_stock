@@ -7,6 +7,7 @@ Gemini Flash 2.5 APIを使用して記事のタグ付けと要約生成を行い
 """
 
 import asyncio
+import json
 import logging
 from typing import Dict, List, Optional
 
