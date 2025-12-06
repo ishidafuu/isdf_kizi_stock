@@ -97,6 +97,12 @@ class EventListener(Client):
         Args:
             message: 受信したDiscordメッセージ
         """
+        # デバッグ：メッセージ受信を記録
+        self.logger.debug(
+            f"[DEBUG] on_message呼び出し: author={message.author.name}, "
+            f"channel_id={message.channel.id}, content={message.content[:30]}"
+        )
+
         # 1. Bot自身のメッセージを除外
         if message.author == self.user:
             return

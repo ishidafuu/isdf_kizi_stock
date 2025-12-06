@@ -51,7 +51,7 @@ class Logger:
 
         # ロガーを取得
         logger = logging.getLogger(name)
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logging.DEBUG)
 
         # 既存のハンドラをクリア（重複防止）
         logger.handlers.clear()
@@ -69,12 +69,12 @@ class Logger:
             backupCount=Logger.BACKUP_COUNT,
             encoding="utf-8",
         )
-        file_handler.setLevel(logging.INFO)
+        file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
 
         # コンソールハンドラを作成
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
+        console_handler.setLevel(logging.DEBUG)
         console_handler.setFormatter(formatter)
 
         # ハンドラを追加
