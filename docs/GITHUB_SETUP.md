@@ -161,7 +161,7 @@ ghp_1234567890abcdefghijklmnopqrstuvwxyz12
 
 **HTTPS URL (推奨):**
 ```
-https://github.com/username/obsidian-vault.git
+https://github.com/ishidafuu/obsidian-vault.git
 ```
 
 ---
@@ -176,13 +176,13 @@ Bot が記事を保存するディレクトリを準備します。
 
 ```bash
 # Bot プロジェクトディレクトリに移動
-cd ~/article-stock-bot
+cd ~/isdf_kizi_stock
 
 # vault ディレクトリが既に存在する場合は削除（テストデータのクリーンアップ）
 rm -rf vault
 
 # GitHub リポジトリをクローン（vault という名前で）
-git clone https://github.com/username/obsidian-vault.git vault
+git clone https://github.com/ishidafuu/obsidian-vault.git vault
 ```
 
 **パターン B: 別の場所に配置する場合**
@@ -192,10 +192,10 @@ git clone https://github.com/username/obsidian-vault.git vault
 cd ~
 
 # GitHub リポジトリをクローン
-git clone https://github.com/username/obsidian-vault.git
+git clone https://github.com/ishidafuu/obsidian-vault.git
 
 # Bot の設定ファイル (.env) でパスを指定
-# OBSIDIAN_VAULT_PATH=/home/pi/obsidian-vault
+# OBSIDIAN_VAULT_PATH=/home/ishidafuu/obsidian-vault
 ```
 
 ### 2. 初期ディレクトリ構造の作成
@@ -277,7 +277,7 @@ Bot が GitHub にプッシュする際の認証を設定します。
 
 ```bash
 # Bot プロジェクトディレクトリに移動
-cd ~/article-stock-bot
+cd ~/isdf_kizi_stock
 
 # .env ファイルを編集
 nano .env
@@ -290,7 +290,7 @@ nano .env
 GITHUB_TOKEN=ghp_1234567890abcdefghijklmnopqrstuvwxyz12
 
 # GitHub Repository URL（Obsidian Vault のリポジトリ）
-GITHUB_REPO_URL=https://github.com/username/obsidian-vault.git
+GITHUB_REPO_URL=https://github.com/ishidafuu/obsidian-vault.git
 ```
 
 **注意:**
@@ -307,7 +307,7 @@ GITHUB_REPO_URL=https://github.com/username/obsidian-vault.git
 OBSIDIAN_VAULT_PATH=./vault
 
 # パターン B（別の場所）
-# OBSIDIAN_VAULT_PATH=/home/pi/obsidian-vault
+# OBSIDIAN_VAULT_PATH=/home/ishidafuu/obsidian-vault
 ```
 
 ### 3. Git の認証情報キャッシュ（オプション）
@@ -336,10 +336,13 @@ git config --global credential.helper 'cache --timeout=3600'
 
 ```bash
 # Bot プロジェクトディレクトリに移動
-cd ~/article-stock-bot
+cd ~/isdf_kizi_stock
+
+# venv環境を有効化
+source venv/bin/activate
 
 # 環境変数を確認（Token の最初の10文字のみ表示）
-poetry run python -c "
+python -c "
 from dotenv import load_dotenv
 import os
 load_dotenv()
@@ -352,7 +355,7 @@ print('Vault Path:', os.getenv('OBSIDIAN_VAULT_PATH', 'Not set'))
 **期待される出力:**
 ```
 GitHub Token: ghp_123456...
-GitHub Repo URL: https://github.com/username/obsidian-vault.git
+GitHub Repo URL: https://github.com/ishidafuu/obsidian-vault.git
 Vault Path: ./vault
 ```
 
@@ -396,7 +399,7 @@ Bot を起動する前に、手動で Git プッシュできるか確認しま�
 
 ```bash
 # vault ディレクトリに移動
-cd ~/article-stock-bot/vault
+cd ~/isdf_kizi_stock/vault
 
 # テストファイルを作成
 echo "# Test Article" > vault/articles/test.md
@@ -644,7 +647,7 @@ Please commit your changes or stash them before you merge.
 
 GitHub Repository のセットアップが完了したら、以下のドキュメントを参照してください:
 
-1. **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Bot の起動と systemd サービス化
+1. **[RASPBERRY_PI_SETUP.md](./RASPBERRY_PI_SETUP.md)** - Bot の起動と systemd サービス化
 2. **テスト投稿** - Discord チャンネルに URL を投稿して、Bot が正常に動作するか確認
 
 ---
