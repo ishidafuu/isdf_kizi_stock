@@ -1,0 +1,16 @@
+[Unit]
+Description=Article Stock Bot - Discord Bot for article archiving with AI tagging
+After=network.target
+
+[Service]
+Type=simple
+User=ishidafuu
+WorkingDirectory=/home/ishidafuu/isdf_kizi_stock
+ExecStart=/home/ishidafuu/isdf_kizi_stock/venv/bin/python3 /home/ishidafuu/isdf_kizi_stock/main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

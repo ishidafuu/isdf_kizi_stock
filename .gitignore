@@ -48,9 +48,6 @@ vault/
 htmlcov/
 .tox/
 
-# Poetry
-poetry.lock
-
 # OS
 .DS_Store
 Thumbs.db
