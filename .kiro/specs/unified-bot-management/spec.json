@@ -1,0 +1,23 @@
+{
+  "feature_name": "unified-bot-management",
+  "created_at": "2025-12-06T00:00:00Z",
+  "updated_at": "2025-12-06T00:00:00Z",
+  "language": "ja",
+  "phase": "requirements-generated",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": false
+    },
+    "design": {
+      "generated": false,
+      "approved": false
+    },
+    "tasks": {
+      "generated": false,
+      "approved": false
+    }
+  },
+  "ready_for_implementation": false,
+  "description": "複数のDiscord Botを統一的な方式でRaspberry Pi上で管理・デプロイするシステム。既存のTennis Discovery Agentの運用方式（venv + requirements.txt、systemdサービス、update_bot.shスクリプト）をベースに標準化し、Article Stock Botを含む今後追加される全てのBotを同じ方式で管理できるようにする。ユーザー名ishidafuu、ホスト名isdf-piで統一。現在のArticle Stock BotをPoetryベースからこの統一システムにマイグレーションする。"
+}
