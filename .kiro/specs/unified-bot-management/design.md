@@ -105,6 +105,8 @@ journalctl でログ確認
 ├── tests/                       # テストコード（オプション）
 ├── logs/                        # ログファイル（Git管理外）
 │   └── bot.log
+├── deployment/                  # デプロイメント関連
+│   └── <bot-name>.service       # systemdサービスファイル
 └── docs/                        # ドキュメント
     ├── RASPBERRY_PI_SETUP.md    # デプロイ手順
     └── ...
@@ -353,6 +355,30 @@ logs/
    pip freeze > requirements.txt
    ```
 
+### 3.4 Git LFS（大容量ファイル管理）
+
+**Tennis Botでは使用、Article Botでは不要**
+
+**Git LFSの必要性判定:**
+
+| Bot | 大容量ファイル | Git LFS必要性 |
+|-----|--------------|--------------|
+| Tennis Bot | 画像・動画ファイルを扱う可能性 | ✅ 必要 |
+| Article Bot | MarkdownとOGP画像URL（URL文字列のみ） | ❌ 不要 |
+
+**Article Botの場合:**
+- 保存するのはMarkdownファイル（テキスト）とOGP画像のURL（文字列）のみ
+- 画像ファイル本体は保存しない
+- したがって、Git LFSのインストールは不要
+
+**新しいBotを追加する場合:**
+- 画像・動画・バイナリファイル等の大容量ファイルを扱う場合のみGit LFSをインストール
+- 必要な場合の手順:
+  ```bash
+  sudo apt install -y git-lfs
+  git lfs install
+  ```
+
 ---
 
 ## 4. systemd サービス設計
@@ -430,23 +456,18 @@ sudo systemctl enable <bot-name>
 sudo systemctl start <bot-name>
 ```
 
-**運用:**
-```bash
-# 状態確認
-sudo systemctl status <bot-name>
+**運用コマンド一覧:**
 
-# ログ確認（リアルタイム）
-sudo journalctl -u <bot-name> -f
-
-# ログ確認（最新50行）
-sudo journalctl -u <bot-name> -n 50 --no-pager
-
-# 再起動
-sudo systemctl restart <bot-name>
-
-# 停止
-sudo systemctl stop <bot-name>
-```
+| 操作 | コマンド |
+|------|---------|
+| **Botの状態確認** | `sudo systemctl status <bot-name>` |
+| **ログ確認（リアルタイム）** | `sudo journalctl -u <bot-name> -f` |
+| **ログ確認（最新50行）** | `sudo journalctl -u <bot-name> -n 50 --no-pager` |
+| **Botの再起動** | `sudo systemctl restart <bot-name>` |
+| **Botの停止** | `sudo systemctl stop <bot-name>` |
+| **Botの起動** | `sudo systemctl start <bot-name>` |
+| **手動起動（デバッグ用）** | `cd ~/<project_name>` → `source venv/bin/activate` → `python3 main.py` |
+| **アプリケーションログ確認** | `tail -f ~/< project_name>/logs/bot.log` |
 
 ### 4.4 ログ管理設計
 
@@ -703,10 +724,28 @@ sudo journalctl -u $SERVICE_NAME -n 20 -f
 7. **トラブルシューティング** - よくある問題と解決方法
 
 **Tennis Bot形式をベースにする:**
-- OSインストールの詳細設定（ホスト名、SSH、Wi-Fi、タイムゾーン、キーボード）
+
+**OSインストールの詳細設定（重要）:**
+```
+デバイス: Raspberry Pi 4
+OS: Raspberry Pi OS (64-bit)
+
+詳細設定（歯車アイコン）:
+✅ ホスト名: isdf-pi
+✅ SSHを有効化（パスワード認証）
+✅ ユーザー名: ishidafuu
+✅ パスワード: （任意のパスワード）
+✅ Wi-Fi設定: （SSIDとパスワードを入力）
+✅ タイムゾーン: Asia/Tokyo
+✅ キーボードレイアウト: us （※英字配列として設定推奨）
+
+⚠️ 重要: キーボード設定を誤ると記号が打てなくなるため注意してください。
+```
+
+**その他の統一事項:**
 - systemdサービス化の詳細手順
 - update_bot.shスクリプトの説明
-- よく使うコマンド一覧表
+- よく使うコマンド一覧表（表形式）
 - トラブルシューティングセクション
 
 ### 7.2 Article Stock Bot用RASPBERRY_PI_SETUP.md（新規作成）
@@ -784,6 +823,9 @@ if __name__ == "__main__":
 
 **3. venv環境の作成とテスト**
 ```bash
+# logsディレクトリ作成（main.pyがログ出力に必要）
+mkdir -p logs
+
 # venv作成
 python3 -m venv venv
 
@@ -793,8 +835,14 @@ source venv/bin/activate
 # 依存関係インストール
 pip install -r requirements.txt
 
-# 動作確認（ローカル）
-python main.py
+# ユニットテスト実行
+pytest
+
+# カバレッジ確認（オプション）
+pytest --cov=src
+
+# 動作確認（ローカル、Botトークンが必要）
+# python main.py
 ```
 
 **4. requirements.txtの調整**
@@ -921,10 +969,47 @@ git commit -m "Update .gitignore for venv-based setup"
 
 #### Phase 6: Raspberry Piへのデプロイ
 
+**6.1 Obsidian Vault用リポジトリのセットアップ**
+
+Article BotはObsidian Vault（GitHubリポジトリ）に記事を保存するため、先にこのリポジトリをセットアップする。
+
 ```bash
 # SSH接続
 ssh ishidafuu@isdf-pi.local
 
+# ホームディレクトリに移動
+cd ~
+
+# Obsidian Vault用リポジトリをクローン（存在しない場合は作成）
+# オプションA: 既存リポジトリをクローン
+git clone https://github.com/ishidafuu/obsidian-vault.git
+cd obsidian-vault
+
+# vault/articlesディレクトリを作成
+mkdir -p vault/articles
+touch vault/articles/.gitkeep
+
+# 初回コミット（リポジトリが空の場合のみ）
+git add vault/articles/.gitkeep
+git commit -m "Initial setup: Create vault/articles directory"
+git push origin main
+
+# オプションB: 新規リポジトリを作成する場合
+# GitHubで新規リポジトリ作成後:
+# mkdir obsidian-vault
+# cd obsidian-vault
+# git init
+# mkdir -p vault/articles
+# touch vault/articles/.gitkeep
+# git add .
+# git commit -m "Initial commit"
+# git remote add origin https://github.com/ishidafuu/obsidian-vault.git
+# git push -u origin main
+```
+
+**6.2 Article Botプロジェクトのセットアップ**
+
+```bash
 # ホームディレクトリに移動
 cd ~
 
@@ -945,11 +1030,20 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# .envファイルを作成（既存のものをコピー）
-cp ~/isdf_kizi_stock.backup/.env .env
+# .envファイルを作成（既存のものをコピー、または新規作成）
+if [ -f ~/isdf_kizi_stock.backup/.env ]; then
+  cp ~/isdf_kizi_stock.backup/.env .env
+else
+  cp .env.sample .env
+  # nanoで.envを編集し、トークン等を設定
+  nano .env
+fi
+
+# .envでOBSIDIAN_VAULT_PATHを設定
+# OBSIDIAN_VAULT_PATH=/home/ishidafuu/obsidian-vault
 
 # ディレクトリ作成
-mkdir -p logs vault/articles
+mkdir -p logs
 
 # systemdサービスファイルを配置
 sudo cp deployment/article-bot.service /etc/systemd/system/
@@ -972,10 +1066,54 @@ sudo journalctl -u article-bot -f
 
 #### Phase 7: 動作確認
 
-1. Discord上で記事URLを投稿
-2. Botが正常に反応するか確認
-3. GitHubにMarkdownファイルがプッシュされるか確認
-4. スレッドコメント追記機能が動作するか確認
+**7.1 サービス起動確認**
+
+systemdサービスが正常に起動していることを確認:
+
+```bash
+# サービス状態確認
+sudo systemctl status article-bot
+
+# 期待される出力:
+# ● article-bot.service - Article Stock Bot - Discord Bot for article archiving with AI tagging
+#    Loaded: loaded (/etc/systemd/system/article-bot.service; enabled; vendor preset: enabled)
+#    Active: active (running) since ...
+#    ...
+```
+
+**7.2 ログ確認**
+
+Botが正常に起動し、Discordに接続できているか確認:
+
+```bash
+# リアルタイムログ確認
+sudo journalctl -u article-bot -f
+
+# 期待されるログ出力:
+# INFO: Article Stock Bot starting...
+# INFO: Logged in as ArticleStockBot#1234
+# INFO: Connected to Discord
+# INFO: Monitoring channel: <channel-name> (ID: 1234567890123456789)
+```
+
+Discord上でBotがオンライン状態になっていることを確認。
+
+**7.3 機能テスト**
+
+1. **記事URL投稿テスト**
+   - Discord上で記事URLを投稿
+   - Botが受信確認リアクション（👁️）を1秒以内に追加するか確認
+   - OGP情報取得、Gemini呼び出し、Markdown生成、GitHubプッシュが完了するか確認
+   - 成功通知がリプライされ、成功リアクション（✅）が追加されるか確認
+
+2. **GitHubプッシュ確認**
+   - `https://github.com/ishidafuu/obsidian-vault`にアクセス
+   - `vault/articles/YYYY-MM-DD_記事タイトル.md`が作成されているか確認
+
+3. **スレッドコメント追記テスト**
+   - 投稿したメッセージのスレッドにコメントを追加
+   - コメントが既存のMarkdownファイルに追記されるか確認
+   - GitHubに再プッシュされるか確認
 
 #### Phase 8: 本番マージ
 
@@ -1169,6 +1307,17 @@ sudo journalctl -u article-bot --since "1 hour ago" | grep ERROR
 
 ---
 
-**Document Version**: 1.0
+**Document Version**: 1.1
 **Last Updated**: 2025-12-06
-**Status**: Draft - Approval Pending
+**Status**: Reviewed - Approval Pending
+
+**Revision History:**
+- v1.0 (2025-12-06): 初版作成
+- v1.1 (2025-12-06): レビュー指摘事項を反映
+  - Obsidian Vault用リポジトリセットアップ手順を追加（Phase 6.1）
+  - OSインストールの詳細設定を追加（キーボードレイアウト等）
+  - Git LFSの必要性を明記（Section 3.4）
+  - よく使うコマンド一覧を表形式に変更
+  - テスト実行手順を追加（Phase 1）
+  - 動作確認の詳細を追加（Phase 7）
+  - systemdサービスファイル配置を標準化（deployment/ディレクトリ）
