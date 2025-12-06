@@ -203,7 +203,7 @@ tags:
 
     @staticmethod
     def _sanitize_filename(title: str) -> str:
-        """
+        r"""
         ファイル名をサニタイズ（Requirement 5.7）
 
         使用できない文字を除去: / \ : * ? " < > |
