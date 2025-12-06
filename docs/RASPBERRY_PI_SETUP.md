@@ -4,28 +4,72 @@
 
 ## 目次
 
-1. [前提条件](#前提条件)
-2. [Python 3.11+ 環境構築](#python-311-環境構築)
-3. [Poetry インストール](#poetry-インストール)
-4. [プロジェクトセットアップ](#プロジェクトセットアップ)
-5. [環境変数の設定](#環境変数の設定)
-6. [Bot の起動](#bot-の起動)
-7. [systemd サービス化（24時間稼働）](#systemd-サービス化24時間稼働)
-8. [トラブルシューティング](#トラブルシューティング)
+1. [概要](#概要)
+2. [OSのインストール](#osのインストール)
+3. [必要なソフトウェアのインストール](#必要なソフトウェアのインストール)
+4. [プロジェクトのセットアップ](#プロジェクトのセットアップ)
+5. [systemdによる自動起動](#systemdによる自動起動)
+6. [運用・メンテナンス](#運用メンテナンス)
+7. [トラブルシューティング](#トラブルシューティング)
 
 ---
 
-## 前提条件
+## 概要
 
-- **Raspberry Pi**: Raspberry Pi 3 以降（推奨: Raspberry Pi 4）
-- **OS**: Raspberry Pi OS (Debian ベース)
-- **ネットワーク**: インターネット接続が可能な環境
-- **ストレージ**: 最低 8GB の空き容量（推奨: 16GB 以上）
-- **RAM**: 最低 1GB（推奨: 2GB 以上）
+Article Stock BotはDiscordで共有された記事URLを自動的に保存し、AIでタグ付けを行うシステムです。
+Raspberry Pi上で24時間稼働させることで、記事の収集・整理を自動化できます。
+
+**主な機能:**
+- Discord上の記事URL自動検出
+- OGP情報取得
+- Gemini APIによる自動タグ付け
+- Markdownファイル生成
+- GitHubへの自動プッシュ
 
 ---
 
-## Python 3.11+ 環境構築
+## OSのインストール
+
+### 1. Raspberry Pi OS のインストール
+
+**必要なもの:**
+- Raspberry Pi 3以降（推奨: Raspberry Pi 4）
+- microSDカード（最低8GB、推奨: 16GB以上）
+- Raspberry Pi Imagerソフトウェア
+
+**インストール手順:**
+
+1. Raspberry Pi Imagerをダウンロード: https://www.raspberrypi.com/software/
+2. Imagerを起動し、以下を選択：
+   - OS: Raspberry Pi OS (64-bit)
+   - ストレージ: microSDカード
+3. 設定（歯車アイコン）で以下を設定：
+   - ホスト名: `isdf-pi`
+   - SSHを有効化
+   - ユーザー名: `ishidafuu`
+   - パスワード: （任意）
+   - **重要:** キーボードレイアウトを`us`（米国配列）に設定
+     - デフォルトは`gb`（英国配列）になっており、記号の位置が異なる
+4. 書き込み開始
+
+### 2. 初回起動とSSH接続
+
+```bash
+# ローカルPCからSSH接続
+ssh ishidafuu@isdf-pi.local
+```
+
+### 3. システムアップデート
+
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+---
+
+## 必要なソフトウェアのインストール
+
+### 1. Python 3.11+ のインストール
 
 Raspberry Pi OS には標準で Python がインストールされていますが、Python 3.11+ が必要です。
 
@@ -92,33 +136,6 @@ python3.11 --version
 
 ---
 
-## Poetry インストール
-
-Poetry は Python の依存関係管理ツールです。
-
-### 1. Poetry のインストール
-
-```bash
-# Poetry 公式インストーラーを使用
-curl -sSL https://install.python-poetry.org | python3 -
-
-# PATH に追加（pyenv を使用している場合は不要な場合があります）
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-
-# インストール確認
-poetry --version
-```
-
-### 2. Poetry の設定
-
-```bash
-# 仮想環境をプロジェクトディレクトリ内に作成する設定（推奨）
-poetry config virtualenvs.in-project true
-```
-
----
-
 ## プロジェクトセットアップ
 
 ### 1. リポジトリのクローン
@@ -128,28 +145,35 @@ poetry config virtualenvs.in-project true
 cd ~
 
 # プロジェクトをクローン
-git clone https://github.com/your-username/article-stock-bot.git
-cd article-stock-bot
+git clone https://github.com/ishidafuu/isdf_kizi_stock.git
+cd isdf_kizi_stock
 ```
 
-### 2. 依存関係のインストール
+### 2. venv仮想環境の作成
 
 ```bash
-# Poetry を使用して依存関係をインストール
-poetry install
+# venv環境を作成
+python3 -m venv venv
 
-# 開発用依存関係を除外する場合（本番環境向け）
-poetry install --only main
+# 仮想環境を有効化
+source venv/bin/activate
+```
+
+### 3. 依存関係のインストール
+
+```bash
+# pip を最新版に更新
+pip install --upgrade pip
+
+# requirements.txt から依存関係をインストール
+pip install -r requirements.txt
 ```
 
 インストールには数分かかる場合があります。Raspberry Pi の性能によっては10分以上かかることもあります。
 
-### 3. インストールの確認
+### 4. インストールの確認
 
 ```bash
-# 仮想環境に入る
-poetry shell
-
 # Python とパッケージの確認
 python --version
 pip list | grep discord
@@ -294,10 +318,13 @@ git push -u origin main
 
 ```bash
 # プロジェクトディレクトリに移動
-cd ~/article-stock-bot
+cd ~/isdf_kizi_stock
 
-# Poetry の仮想環境で Bot を起動
-poetry run python -m src.bot.client
+# venv環境を有効化
+source venv/bin/activate
+
+# Botを起動
+python main.py
 ```
 
 ### 3. 起動確認
@@ -341,77 +368,50 @@ Bot をバックグラウンドで24時間稼働させるため、systemd サー
 
 ```bash
 # プロジェクトディレクトリに移動
-cd ~/article-stock-bot
+cd ~/isdf_kizi_stock
 
 # systemd ユニットファイルをシステムにコピー
-sudo cp deployment/article-stock-bot.service /etc/systemd/system/
+sudo cp deployment/article-bot.service /etc/systemd/system/
 
-# ファイルを編集して環境に合わせてパスを調整
-sudo nano /etc/systemd/system/article-stock-bot.service
+# ファイルを編集して環境に合わせてパスを調整（必要に応じて）
+sudo nano /etc/systemd/system/article-bot.service
 ```
 
 ### 2. ユニットファイルの設定内容
 
-`deployment/article-stock-bot.service` の内容を確認・編集します：
+`deployment/article-bot.service` の内容を確認・編集します：
 
 ```ini
 [Unit]
 Description=Article Stock Bot - Discord Bot for article archiving with AI tagging
-After=network-online.target
-Wants=network-online.target
+After=network.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/article-stock-bot
-ExecStart=/usr/bin/poetry run python main.py
+User=ishidafuu
+WorkingDirectory=/home/ishidafuu/isdf_kizi_stock
+ExecStart=/home/ishidafuu/isdf_kizi_stock/venv/bin/python3 /home/ishidafuu/isdf_kizi_stock/main.py
 Restart=always
 RestartSec=10
-
-# ログ出力設定
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=article-stock-bot
-
-# 環境変数（.envファイルから自動読み込み）
-Environment="PYTHONUNBUFFERED=1"
-
-# リソース制限（オプション）
-# メモリ使用量を制限（Raspberry Pi向け）
-MemoryLimit=512M
-
-# プロセスのタイムアウト設定
-TimeoutStopSec=30
 
 [Install]
 WantedBy=multi-user.target
 ```
 
 **重要な設定項目**:
-- `User`: Raspberry Pi のユーザー名（デフォルト: `pi`、環境に合わせて変更）
-- `WorkingDirectory`: プロジェクトのルートディレクトリ（例: `/home/pi/article-stock-bot`）
-- `ExecStart`: Poetry の実行パス（`which poetry` で確認し、必要に応じて調整）
+- `User`: ユーザー名（`ishidafuu`）
+- `WorkingDirectory`: プロジェクトのルートディレクトリ（`/home/ishidafuu/isdf_kizi_stock`）
+- `ExecStart`: venv環境のPython実行パス（`/home/ishidafuu/isdf_kizi_stock/venv/bin/python3`）
 - `Restart=always`: Bot がクラッシュしても自動再起動
 - `RestartSec=10`: 再起動までの待機時間（秒）
 - `StandardOutput/StandardError=journal`: ログを systemd の journal に出力
-- `MemoryLimit=512M`: メモリ使用量の制限（Raspberry Pi 向け最適化）
-
-**パスの確認方法**:
-
-```bash
-# Poetry のパスを確認
-which poetry
-# 出力例: /usr/bin/poetry または /home/pi/.local/bin/poetry
-
-# プロジェクトのパスを確認
-pwd
-# 出力例: /home/pi/article-stock-bot
-```
 
 ### 3. ログディレクトリの作成
 
 ```bash
-mkdir -p ~/article-stock-bot/logs
+mkdir -p ~/isdf_kizi_stock/logs
 ```
 
 ### 4. サービスの有効化と起動
@@ -421,38 +421,16 @@ mkdir -p ~/article-stock-bot/logs
 sudo systemctl daemon-reload
 
 # サービスを有効化（起動時に自動起動）
-sudo systemctl enable article-stock-bot
+sudo systemctl enable article-bot
 
 # サービスを起動
-sudo systemctl start article-stock-bot
+sudo systemctl start article-bot
 
 # サービスの状態を確認
-sudo systemctl status article-stock-bot
+sudo systemctl status article-bot
 ```
 
-### 5. サービスの管理コマンド
-
-```bash
-# サービスの起動
-sudo systemctl start article-stock-bot
-
-# サービスの停止
-sudo systemctl stop article-stock-bot
-
-# サービスの再起動
-sudo systemctl restart article-stock-bot
-
-# サービスの状態確認
-sudo systemctl status article-stock-bot
-
-# ログの確認
-sudo journalctl -u article-stock-bot -f
-
-# アプリケーションログの確認
-tail -f ~/article-stock-bot/logs/article_bot.log
-```
-
-### 6. 自動起動の確認
+### 5. 自動起動の確認
 
 Raspberry Pi を再起動して、Bot が自動起動するか確認します。
 
@@ -463,8 +441,107 @@ sudo reboot
 再起動後、以下のコマンドで Bot が起動していることを確認：
 
 ```bash
-sudo systemctl status article-stock-bot
+sudo systemctl status article-bot
 ```
+
+---
+
+## 運用・メンテナンス
+
+### 1. update_bot.sh を使った更新
+
+プロジェクトには便利な更新スクリプト `update_bot.sh` が含まれています。
+このスクリプトを使うことで、以下の操作を一度に実行できます：
+
+1. GitHubから最新コードを取得（git pull）
+2. 依存関係を更新（pip install -r requirements.txt）
+3. サービスを再起動（systemctl restart article-bot）
+4. ログを表示（journalctl -f）
+
+**使い方:**
+
+```bash
+# プロジェクトディレクトリに移動
+cd ~/isdf_kizi_stock
+
+# update_bot.sh を実行
+./update_bot.sh
+```
+
+**実行結果:**
+
+```
+========================================
+🔄 isdf_kizi_stock の更新を開始します...
+========================================
+📥 Git Pull...
+Already up to date.
+📦 ライブラリ更新...
+Requirement already satisfied: ...
+========================================
+🚀 サービスを再起動します...
+========================================
+✅ 再起動完了。直近のログを表示します（Ctrl+Cで終了）
+Dec 06 12:34:56 isdf-pi article-bot[1234]: INFO: Bot起動完了...
+```
+
+### 2. よく使うコマンド一覧
+
+| カテゴリ | コマンド | 説明 |
+|---------|---------|------|
+| **サービス操作** | `sudo systemctl start article-bot` | サービス起動 |
+| | `sudo systemctl stop article-bot` | サービス停止 |
+| | `sudo systemctl restart article-bot` | サービス再起動 |
+| | `sudo systemctl status article-bot` | サービス状態確認 |
+| | `sudo systemctl enable article-bot` | 自動起動を有効化 |
+| | `sudo systemctl disable article-bot` | 自動起動を無効化 |
+| **ログ確認** | `sudo journalctl -u article-bot -f` | リアルタイムログ確認 |
+| | `sudo journalctl -u article-bot -n 50` | 最新50行のログ表示 |
+| | `sudo journalctl -u article-bot --since today` | 今日のログ表示 |
+| | `tail -f ~/isdf_kizi_stock/logs/article_bot.log` | アプリケーションログ確認 |
+| **コード更新** | `./update_bot.sh` | ワンコマンド更新（推奨） |
+| | `git pull` | 最新コードを取得 |
+| | `source venv/bin/activate && pip install -r requirements.txt` | 依存関係更新 |
+| **環境確認** | `python3 --version` | Pythonバージョン確認 |
+| | `source venv/bin/activate && pip list` | インストール済みパッケージ一覧 |
+| | `df -h` | ディスク使用量確認 |
+| | `free -h` | メモリ使用量確認 |
+| **Git操作** | `git status` | 変更状態確認 |
+| | `git log -n 5` | 最新5件のコミット履歴 |
+| | `git branch` | ブランチ一覧 |
+
+### 3. 定期メンテナンス
+
+**毎月:**
+- ディスク使用量の確認: `df -h`
+- ログファイルのローテーション確認: `ls -lh logs/`
+- システムアップデート: `sudo apt update && sudo apt upgrade -y`
+
+**アップデート手順:**
+
+```bash
+# 1. Botを停止
+sudo systemctl stop article-bot
+
+# 2. システムアップデート
+sudo apt update && sudo apt upgrade -y
+
+# 3. コード更新
+cd ~/isdf_kizi_stock
+git pull
+
+# 4. 依存関係更新
+source venv/bin/activate
+pip install -r requirements.txt
+
+# 5. Botを起動
+sudo systemctl start article-bot
+
+# 6. 動作確認
+sudo systemctl status article-bot
+```
+
+または、`update_bot.sh` を使えば上記の手順（2を除く）を自動で実行できます。
 
 ---
 
@@ -475,14 +552,16 @@ sudo systemctl status article-stock-bot
 #### 1. Python バージョンの確認
 
 ```bash
-poetry run python --version
+source venv/bin/activate
+python --version
 # Python 3.11.x と表示されることを確認
 ```
 
 #### 2. 依存関係の再インストール
 
 ```bash
-poetry install --no-cache
+source venv/bin/activate
+pip install --no-cache-dir -r requirements.txt
 ```
 
 #### 3. 環境変数の確認
@@ -587,11 +666,11 @@ sudo journalctl -u article-stock-bot -f
 #### パスの確認
 
 ```bash
-# Poetry のパスを確認
-which poetry
+# venv Python のパスを確認
+ls -l ~/isdf_kizi_stock/venv/bin/python3
 
-# Python のパスを確認
-poetry run which python
+# 実行権限の確認
+~/isdf_kizi_stock/venv/bin/python3 --version
 ```
 
 ユニットファイルの `ExecStart` に正しいパスを設定してください。
@@ -655,22 +734,30 @@ Bot を最新バージョンにアップデートする手順：
 
 ```bash
 # プロジェクトディレクトリに移動
-cd ~/article-stock-bot
+cd ~/isdf_kizi_stock
 
+# update_bot.sh を使った簡単な更新
+./update_bot.sh
+```
+
+または手動で実行する場合：
+
+```bash
 # Bot を停止
-sudo systemctl stop article-stock-bot
+sudo systemctl stop article-bot
 
 # 最新コードを取得
-git pull origin main
+git pull
 
 # 依存関係を更新
-poetry install
+source venv/bin/activate
+pip install -r requirements.txt
 
 # Bot を再起動
-sudo systemctl start article-stock-bot
+sudo systemctl start article-bot
 
 # 動作確認
-sudo systemctl status article-stock-bot
+sudo systemctl status article-bot
 ```
 
 ---
