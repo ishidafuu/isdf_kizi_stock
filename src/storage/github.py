@@ -255,9 +255,27 @@ class GitManager:
     def _git_push(self) -> None:
         """
         git push を実行（Requirement 6.3）
+
+        初回push時は自動的にupstream branchを設定します。
         """
         origin = self.repo.remote("origin")
-        origin.push()
+        current_branch = self.repo.active_branch
+
+        # upstream branchが設定されているかチェック
+        try:
+            tracking_branch = current_branch.tracking_branch()
+            if tracking_branch is None:
+                # upstream未設定の場合、set_upstreamオプションを使用
+                self.logger.info(f"初回push: upstream branchを設定します ({current_branch.name})")
+                origin.push(refspec=f'{current_branch.name}:{current_branch.name}', set_upstream=True)
+            else:
+                # 通常のpush
+                origin.push()
+        except Exception:
+            # tracking_branch()でエラーが出た場合も初回pushとして扱う
+            self.logger.info(f"初回push: upstream branchを設定します ({current_branch.name})")
+            origin.push(refspec=f'{current_branch.name}:{current_branch.name}', set_upstream=True)
+
         self.logger.info("git push実行")
 
     async def pull_latest(self) -> bool:
