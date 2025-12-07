@@ -69,7 +69,7 @@ class GeminiClient:
             self.logger.warning("Gemini APIキーが設定されていません")
 
         # モデルを初期化（Gemini Flash 2.5）
-        self.model = genai.GenerativeModel("gemini-2.0-flash-exp")
+        self.model = genai.GenerativeModel("gemini-2.5-flash")
 
     async def generate_tags_and_summary(
         self,
